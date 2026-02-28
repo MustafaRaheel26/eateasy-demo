@@ -1,20 +1,49 @@
-import React, { useState, useEffect } from 'react';
-import { motion, AnimatePresence } from 'motion/react';
-import { 
-  ChefHat, 
-  Users, 
-  Truck, 
-  ChevronDown, 
-  Instagram, 
-  Mail, 
-  Check, 
+import React, { useState, useEffect, useRef } from "react";
+import { motion, AnimatePresence } from "motion/react";
+import {
+  ChefHat,
+  Users,
+  Truck,
+  ChevronDown,
+  Instagram,
+  Mail,
+  Check,
   ArrowRight,
   ArrowUpRight,
   Twitter,
   Facebook,
   Linkedin,
-  X
-} from 'lucide-react';
+  X,
+} from "lucide-react";
+
+// --- Utility Functions ---
+const isMobile = () => {
+  if (typeof window === "undefined") return false;
+  return window.innerWidth < 1024;
+};
+
+const throttle = (func: Function, limit: number) => {
+  let inThrottle: boolean;
+  let lastRun = Date.now();
+  return function (...args: any[]) {
+    const now = Date.now();
+    if (now - lastRun >= limit && !inThrottle) {
+      func.apply(this, args);
+      lastRun = now;
+      inThrottle = false;
+    } else if (!inThrottle) {
+      inThrottle = true;
+      setTimeout(
+        () => {
+          func.apply(this, args);
+          inThrottle = false;
+          lastRun = Date.now();
+        },
+        limit - (now - lastRun),
+      );
+    }
+  };
+};
 
 // --- Types ---
 interface Dish {
@@ -27,57 +56,106 @@ interface Dish {
 // --- Components ---
 
 const Logo = ({ className = "" }: { className?: string }) => (
-  <a href="#" className={`flex items-baseline gap-1 font-serif tracking-tighter text-slate-900 ${className}`}>
+  <a
+    href="#"
+    className={`flex items-baseline gap-1 font-serif tracking-tighter text-slate-900 ${className}`}
+  >
     <span className="text-2xl lowercase">eat</span>
     <span className="text-4xl font-bold lowercase">easy</span>
   </a>
 );
 
-const AdvancedHamburger = ({ isOpen, onClick }: { isOpen: boolean; onClick: () => void }) => (
-  <button 
-    onClick={onClick}
-    className="relative w-10 h-10 flex flex-col justify-center items-center gap-1.5 z-50 group"
-  >
-    <motion.span 
-      animate={isOpen ? { rotate: 45, y: 8 } : { rotate: 0, y: 0 }}
-      className="w-8 h-0.5 bg-slate-900 block transition-transform duration-300"
-    />
-    <motion.span 
-      animate={isOpen ? { opacity: 0, x: -10 } : { opacity: 1, x: 0 }}
-      className="w-8 h-0.5 bg-slate-900 block transition-all duration-300"
-    />
-    <motion.span 
-      animate={isOpen ? { rotate: -45, y: -8 } : { rotate: 0, y: 0 }}
-      className="w-8 h-0.5 bg-slate-900 block transition-transform duration-300"
-    />
-  </button>
-);
+const AdvancedHamburger = ({
+  isOpen,
+  onClick,
+}: {
+  isOpen: boolean;
+  onClick: () => void;
+}) => {
+  const [isDesktop] = React.useState(() => !isMobile());
+
+  return (
+    <button
+      onClick={onClick}
+      className="relative w-10 h-10 flex flex-col justify-center items-center gap-1.5 z-50 group"
+    >
+      <motion.span
+        animate={isOpen ? { rotate: 45, y: 8 } : { rotate: 0, y: 0 }}
+        transition={isDesktop ? { duration: 0.3 } : { duration: 0.2 }}
+        className="w-8 h-0.5 bg-slate-900 block transition-transform duration-300"
+      />
+      <motion.span
+        animate={isOpen ? { opacity: 0, x: -10 } : { opacity: 1, x: 0 }}
+        transition={isDesktop ? { duration: 0.3 } : { duration: 0.2 }}
+        className="w-8 h-0.5 bg-slate-900 block transition-all duration-300"
+      />
+      <motion.span
+        animate={isOpen ? { rotate: -45, y: -8 } : { rotate: 0, y: 0 }}
+        transition={isDesktop ? { duration: 0.3 } : { duration: 0.2 }}
+        className="w-8 h-0.5 bg-slate-900 block transition-transform duration-300"
+      />
+    </button>
+  );
+};
 
 const Header = () => {
   const [isScrolled, setIsScrolled] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const scrollTimerRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
-    const handleScroll = () => setIsScrolled(window.scrollY > 20);
-    window.addEventListener('scroll', handleScroll);
-    return () => window.removeEventListener('scroll', handleScroll);
+    const handleScroll = throttle(() => {
+      setIsScrolled(window.scrollY > 20);
+    }, 100);
+
+    window.addEventListener("scroll", handleScroll as EventListener, {
+      passive: true,
+    });
+
+    return () => {
+      window.removeEventListener("scroll", handleScroll as EventListener);
+      if (scrollTimerRef.current) clearTimeout(scrollTimerRef.current);
+    };
   }, []);
 
+  // Close menu on resize to desktop
+  useEffect(() => {
+    const handleResize = () => {
+      if (window.innerWidth >= 1024 && mobileMenuOpen) {
+        setMobileMenuOpen(false);
+      }
+    };
+
+    const resizeTimer = throttle(handleResize, 150);
+    window.addEventListener("resize", resizeTimer as EventListener, {
+      passive: true,
+    });
+
+    return () =>
+      window.removeEventListener("resize", resizeTimer as EventListener);
+  }, [mobileMenuOpen]);
+
   const navLinks = [
-    { name: 'Philosophy', href: '#how-it-works' },
-    { name: 'The Menu', href: '#menu' },
-    { name: 'Pricing', href: '#pricing' },
-    { name: 'Contact', href: '#subscribe' },
+    { name: "Philosophy", href: "#how-it-works" },
+    { name: "The Menu", href: "#menu" },
+    { name: "Pricing", href: "#pricing" },
+    { name: "Contact", href: "#subscribe" },
   ];
 
   return (
-    <header className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${isScrolled ? 'bg-white border-b-2 border-slate-900 py-4' : 'bg-transparent py-8'}`}>
+    <header
+      className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${isScrolled ? "bg-white border-b-2 border-slate-900 py-4" : "bg-transparent py-8"}`}
+    >
       <div className="max-w-7xl mx-auto px-6 md:px-12 flex items-center justify-between">
         <Logo />
 
         <nav className="hidden lg:flex items-center gap-12">
           {navLinks.map((link) => (
-            <a key={link.name} href={link.href} className="text-[10px] uppercase tracking-[0.3em] font-bold text-slate-500 hover:text-slate-900 transition-colors">
+            <a
+              key={link.name}
+              href={link.href}
+              className="text-[10px] uppercase tracking-[0.3em] font-bold text-slate-500 hover:text-slate-900 transition-colors"
+            >
               {link.name}
             </a>
           ))}
@@ -87,31 +165,39 @@ const Header = () => {
         </nav>
 
         <div className="lg:hidden">
-          <AdvancedHamburger isOpen={mobileMenuOpen} onClick={() => setMobileMenuOpen(!mobileMenuOpen)} />
+          <AdvancedHamburger
+            isOpen={mobileMenuOpen}
+            onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+          />
         </div>
       </div>
 
-      <AnimatePresence>
+      <AnimatePresence mode="wait">
         {mobileMenuOpen && (
-          <motion.div 
-            initial={{ x: '100%' }}
+          <motion.div
+            initial={{ x: "100%" }}
             animate={{ x: 0 }}
-            exit={{ x: '100%' }}
-            transition={{ type: 'spring', damping: 25, stiffness: 200 }}
-            className="fixed inset-0 bg-white z-40 flex flex-col items-center justify-center gap-12 lg:hidden"
+            exit={{ x: "100%" }}
+            transition={{
+              type: "spring",
+              damping: 30,
+              stiffness: 300,
+              mass: 1,
+            }}
+            className="fixed inset-0 bg-white z-40 flex flex-col items-center justify-center gap-12 lg:hidden will-change-transform"
           >
             {navLinks.map((link) => (
-              <a 
-                key={link.name} 
-                href={link.href} 
+              <a
+                key={link.name}
+                href={link.href}
                 className="text-5xl font-serif text-slate-900 hover:italic transition-all"
                 onClick={() => setMobileMenuOpen(false)}
               >
                 {link.name}
               </a>
             ))}
-            <a 
-              href="#subscribe" 
+            <a
+              href="#subscribe"
               className="btn-edgy text-xl px-12 py-6"
               onClick={() => setMobileMenuOpen(false)}
             >
@@ -144,14 +230,24 @@ const Hero = () => {
                 Culture.
               </h1>
               <p className="text-lg md:text-xl text-slate-600 max-w-md leading-relaxed mb-16 font-medium border-l-4 border-slate-900 pl-6">
-                Restaurant-quality office lunches for teams of 10 or more. Sharp pricing, bold flavors.
+                Restaurant-quality office lunches for teams of 10 or more. Sharp
+                pricing, bold flavors.
               </p>
               <div className="flex flex-wrap gap-10 items-center">
-                <a href="#subscribe" className="btn-edgy group flex items-center gap-4 text-sm">
+                <a
+                  href="#subscribe"
+                  className="btn-edgy group flex items-center gap-4 text-sm"
+                >
                   Get Started
-                  <ArrowUpRight size={20} className="group-hover:translate-x-1 group-hover:-translate-y-1 transition-transform" />
+                  <ArrowUpRight
+                    size={20}
+                    className="group-hover:translate-x-1 group-hover:-translate-y-1 transition-transform"
+                  />
                 </a>
-                <a href="#menu" className="text-[10px] uppercase tracking-[0.3em] font-black text-slate-900 border-b-2 border-slate-900 pb-1 hover:bg-slate-900 hover:text-white transition-all">
+                <a
+                  href="#menu"
+                  className="text-[10px] uppercase tracking-[0.3em] font-black text-slate-900 border-b-2 border-slate-900 pb-1 hover:bg-slate-900 hover:text-white transition-all"
+                >
                   Explore Menu
                 </a>
               </div>
@@ -163,16 +259,19 @@ const Hero = () => {
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               transition={{ duration: 1.5 }}
-              className="h-full w-full transition-all duration-1000"
+              className="h-full w-full transition-all duration-1000 will-change-auto"
             >
-              <img 
-                src="https://images.unsplash.com/photo-1547592166-23ac45744acd?auto=format&fit=crop&q=80&w=1200" 
-                alt="Gourmet dish" 
+              <img
+                src="https://images.unsplash.com/photo-1547592166-23ac45744acd?auto=format&fit=crop&q=80&w=1200"
+                alt="Gourmet dish"
                 className="w-full h-full object-cover"
+                loading="lazy"
                 referrerPolicy="no-referrer"
               />
               <div className="absolute top-10 right-10 bg-white border-2 border-slate-900 p-6 shadow-[10px_10px_0px_0px_rgba(0,0,0,1)]">
-                <div className="text-[10px] font-black tracking-widest uppercase">New Menu</div>
+                <div className="text-[10px] font-black tracking-widest uppercase">
+                  New Menu
+                </div>
                 <div className="text-2xl font-serif italic">Spring '24</div>
               </div>
             </motion.div>
@@ -188,46 +287,60 @@ const HowItWorks = () => {
     {
       num: "01",
       title: "CURATION",
-      description: "Select from our weekly rotating menus designed by executive chefs."
+      description:
+        "Select from our weekly rotating menus designed by executive chefs.",
     },
     {
       num: "02",
       title: "VERIFICATION",
-      description: "Verify your office location. We serve professional teams of 10+."
+      description:
+        "Verify your office location. We serve professional teams of 10+.",
     },
     {
       num: "03",
       title: "DELIVERY",
-      description: "Seamless white-glove delivery directly to your office floor."
-    }
+      description:
+        "Seamless white-glove delivery directly to your office floor.",
+    },
   ];
 
   return (
-    <section id="how-it-works" className="py-32 bg-white border-b-2 border-slate-900">
+    <section
+      id="how-it-works"
+      className="py-32 bg-white border-b-2 border-slate-900"
+    >
       <div className="max-w-7xl mx-auto px-6 md:px-12">
         <div className="grid lg:grid-cols-12 gap-20">
           <div className="lg:col-span-4">
-            <h2 className="text-5xl md:text-6xl font-serif text-slate-900 mb-10 leading-none">The <br />System.</h2>
+            <h2 className="text-5xl md:text-6xl font-serif text-slate-900 mb-10 leading-none">
+              The <br />
+              System.
+            </h2>
             <p className="text-slate-500 font-medium leading-relaxed uppercase text-[11px] tracking-widest">
-              Reimagined office catering as a high-performance subscription service.
+              Reimagined office catering as a high-performance subscription
+              service.
             </p>
           </div>
           <div className="lg:col-span-8 grid md:grid-cols-3 gap-0 border-2 border-slate-900">
             {steps.map((step, idx) => (
-              <motion.div 
+              <motion.div
                 key={idx}
                 initial={{ opacity: 0 }}
                 whileInView={{ opacity: 1 }}
                 viewport={{ once: true }}
                 transition={{ delay: idx * 0.2 }}
-                className={`p-10 flex flex-col justify-between min-h-[300px] ${idx !== 2 ? 'border-b-2 md:border-b-0 md:border-r-2 border-slate-900' : ''} hover:bg-slate-50 transition-colors`}
+                className={`p-10 flex flex-col justify-between min-h-[300px] ${idx !== 2 ? "border-b-2 md:border-b-0 md:border-r-2 border-slate-900" : ""} hover:bg-slate-50 transition-colors`}
               >
                 <span className="font-mono text-6xl text-slate-100 font-black">
                   {step.num}
                 </span>
                 <div>
-                  <h3 className="text-xs font-black tracking-[0.3em] text-slate-900 mb-4 uppercase">{step.title}</h3>
-                  <p className="text-sm text-slate-500 leading-relaxed font-medium">{step.description}</p>
+                  <h3 className="text-xs font-black tracking-[0.3em] text-slate-900 mb-4 uppercase">
+                    {step.title}
+                  </h3>
+                  <p className="text-sm text-slate-500 leading-relaxed font-medium">
+                    {step.description}
+                  </p>
                 </div>
               </motion.div>
             ))}
@@ -238,92 +351,188 @@ const HowItWorks = () => {
   );
 };
 
-const DishCard = ({ dish, onClick }: { dish: Dish; onClick: () => void; key?: React.Key }) => (
-  <motion.div 
-    whileHover={{ x: 10 }}
-    onClick={onClick}
-    className="group cursor-pointer border-2 border-slate-900 p-4 hover:shadow-[10px_10px_0px_0px_rgba(0,0,0,1)] transition-all bg-white"
-  >
-    <div className="relative aspect-square overflow-hidden mb-6 border-2 border-slate-900">
-      <img 
-        src={dish.image} 
-        alt={dish.name} 
-        className="w-full h-full object-cover transition-all duration-500"
-        referrerPolicy="no-referrer"
-      />
-    </div>
-    <h4 className="text-2xl font-serif text-slate-900 mb-2">{dish.name}</h4>
-    <div className="flex items-center justify-between">
-      <p className="text-[10px] text-slate-400 uppercase tracking-widest font-black">Chef Selection</p>
-      <ArrowUpRight size={16} className="opacity-0 group-hover:opacity-100 transition-opacity" />
-    </div>
-  </motion.div>
-);
+const DishCard = ({
+  dish,
+  onClick,
+}: {
+  dish: Dish;
+  onClick: () => void;
+  key?: React.Key;
+}) => {
+  const [isDesktop, setIsDesktop] = React.useState(false);
 
-const DishModal = ({ dish, onClose }: { dish: Dish; onClose: () => void }) => (
-  <motion.div 
-    initial={{ opacity: 0 }}
-    animate={{ opacity: 1 }}
-    exit={{ opacity: 0 }}
-    className="fixed inset-0 z-[100] flex items-center justify-center p-6 bg-white/90 backdrop-blur-sm"
-    onClick={onClose}
-  >
-    <motion.div 
-      initial={{ scale: 0.9, y: 20, opacity: 0 }}
-      animate={{ scale: 1, y: 0, opacity: 1 }}
-      exit={{ scale: 0.9, y: 20, opacity: 0 }}
-      className="bg-white border-4 border-slate-900 p-8 md:p-12 max-w-4xl w-full relative shadow-[20px_20px_0px_0px_rgba(0,0,0,1)]"
-      onClick={e => e.stopPropagation()}
+  React.useEffect(() => {
+    setIsDesktop(!isMobile());
+  }, []);
+
+  return (
+    <motion.div
+      whileHover={isDesktop ? { x: 10 } : undefined}
+      onClick={onClick}
+      className="group cursor-pointer border-2 border-slate-900 p-4 hover:shadow-[10px_10px_0px_0px_rgba(0,0,0,1)] transition-all bg-white will-change-transform"
     >
-      <button 
-        onClick={onClose}
-        className="absolute top-6 right-6 text-slate-900 hover:rotate-90 transition-transform duration-300"
-      >
-        <X size={32} />
-      </button>
-
-      <div className="grid md:grid-cols-2 gap-12 items-center">
-        <div className="border-4 border-slate-900 aspect-square overflow-hidden">
-          <img 
-            src={dish.image} 
-            alt={dish.name} 
-            className="w-full h-full object-cover"
-            referrerPolicy="no-referrer"
-          />
-        </div>
-        <div>
-          <span className="text-[10px] uppercase tracking-[0.5em] font-black text-slate-400 mb-4 block">// Premium Selection</span>
-          <h2 className="text-5xl md:text-7xl font-serif text-slate-900 mb-8 leading-none">{dish.name}</h2>
-          <p className="text-lg text-slate-600 mb-10 leading-relaxed font-medium border-l-4 border-slate-900 pl-6">
-            {dish.description} This dish is prepared fresh daily using locally sourced ingredients, ensuring a restaurant-quality experience right in your office.
-          </p>
-          <div className="flex flex-wrap gap-6">
-            <div className="px-4 py-2 border-2 border-slate-900 font-black text-[10px] uppercase tracking-widest">Fresh Daily</div>
-            <div className="px-4 py-2 border-2 border-slate-900 font-black text-[10px] uppercase tracking-widest">Chef Curated</div>
-          </div>
-        </div>
+      <div className="relative aspect-square overflow-hidden mb-6 border-2 border-slate-900">
+        <img
+          src={dish.image}
+          alt={dish.name}
+          className="w-full h-full object-cover transition-all duration-500"
+          loading="lazy"
+          referrerPolicy="no-referrer"
+        />
+      </div>
+      <h4 className="text-2xl font-serif text-slate-900 mb-2">{dish.name}</h4>
+      <div className="flex items-center justify-between">
+        <p className="text-[10px] text-slate-400 uppercase tracking-widest font-black">
+          Chef Selection
+        </p>
+        <ArrowUpRight
+          size={16}
+          className="opacity-0 group-hover:opacity-100 transition-opacity"
+        />
       </div>
     </motion.div>
-  </motion.div>
-);
+  );
+};
+
+const DishModal = ({ dish, onClose }: { dish: Dish; onClose: () => void }) => {
+  const [isDesktop] = React.useState(() => !isMobile());
+
+  return (
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      transition={{ duration: 0.2 }}
+      className="fixed inset-0 z-[100] flex items-center justify-center p-6 bg-white/90 backdrop-blur-sm"
+      onClick={onClose}
+    >
+      <motion.div
+        initial={isDesktop ? { scale: 0.9, y: 20, opacity: 0 } : { opacity: 0 }}
+        animate={isDesktop ? { scale: 1, y: 0, opacity: 1 } : { opacity: 1 }}
+        exit={isDesktop ? { scale: 0.9, y: 20, opacity: 0 } : { opacity: 0 }}
+        transition={{ duration: 0.25 }}
+        className="bg-white border-4 border-slate-900 p-8 md:p-12 max-w-4xl w-full relative shadow-[20px_20px_0px_0px_rgba(0,0,0,1)]"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <button
+          onClick={onClose}
+          className="absolute top-6 right-6 text-slate-900 hover:rotate-90 transition-transform duration-300"
+        >
+          <X size={32} />
+        </button>
+
+        <div className="grid md:grid-cols-2 gap-12 items-center">
+          <div className="border-4 border-slate-900 aspect-square overflow-hidden">
+            <img
+              src={dish.image}
+              alt={dish.name}
+              className="w-full h-full object-cover will-change-auto"
+              loading="lazy"
+              referrerPolicy="no-referrer"
+            />
+          </div>
+          <div>
+            <span className="text-[10px] uppercase tracking-[0.5em] font-black text-slate-400 mb-4 block"></span>
+            <h2 className="text-5xl md:text-7xl font-serif text-slate-900 mb-8 leading-none">
+              {dish.name}
+            </h2>
+            <p className="text-lg text-slate-600 mb-10 leading-relaxed font-medium border-l-4 border-slate-900 pl-6">
+              {dish.description} This dish is prepared fresh daily using locally
+              sourced ingredients, ensuring a restaurant-quality experience
+              right in your office.
+            </p>
+            <div className="flex flex-wrap gap-6">
+              <div className="px-4 py-2 border-2 border-slate-900 font-black text-[10px] uppercase tracking-widest">
+                Fresh Daily
+              </div>
+              <div className="px-4 py-2 border-2 border-slate-900 font-black text-[10px] uppercase tracking-widest">
+                Chef Curated
+              </div>
+            </div>
+          </div>
+        </div>
+      </motion.div>
+    </motion.div>
+  );
+};
 
 const MenuSection = () => {
   const [selectedDish, setSelectedDish] = useState<Dish | null>(null);
 
   const plantBased: Dish[] = [
-    { id: 1, name: "Quinoa Harvest", description: "Roasted sweet potatoes, kale, chickpeas.", image: "https://images.unsplash.com/photo-1512621776951-a57141f2eefd?auto=format&fit=crop&q=80&w=600" },
-    { id: 2, name: "Mushroom Risotto", description: "Creamy arborio rice with wild mushrooms.", image: "https://images.unsplash.com/photo-1476124369491-e7addf5db371?auto=format&fit=crop&q=80&w=600" },
-    { id: 3, name: "Thai Green Curry", description: "Spicy coconut curry with vegetables.", image: "https://images.unsplash.com/photo-1455619452474-d2be8b1e70cd?auto=format&fit=crop&q=80&w=600" },
-    { id: 4, name: "Lentil Shepherd", description: "Hearty lentils with sweet potato mash.", image: "https://images.unsplash.com/photo-1543339308-43e59d6b73a6?auto=format&fit=crop&q=80&w=600" },
-    { id: 5, name: "Zucchini Noodles", description: "Fresh zoodles with basil pesto.", image: "https://images.unsplash.com/photo-1547592166-23ac45744acd?auto=format&fit=crop&q=80&w=600" },
+    {
+      id: 1,
+      name: "Quinoa Harvest",
+      description: "Roasted sweet potatoes, kale, chickpeas.",
+      image:
+        "https://images.unsplash.com/photo-1512621776951-a57141f2eefd?auto=format&fit=crop&q=80&w=600",
+    },
+    {
+      id: 2,
+      name: "Mushroom Risotto",
+      description: "Creamy arborio rice with wild mushrooms.",
+      image:
+        "https://images.unsplash.com/photo-1476124369491-e7addf5db371?auto=format&fit=crop&q=80&w=600",
+    },
+    {
+      id: 3,
+      name: "Thai Green Curry",
+      description: "Spicy coconut curry with vegetables.",
+      image:
+        "https://images.unsplash.com/photo-1455619452474-d2be8b1e70cd?auto=format&fit=crop&q=80&w=600",
+    },
+    {
+      id: 4,
+      name: "Lentil Shepherd",
+      description: "Hearty lentils with sweet potato mash.",
+      image:
+        "https://images.unsplash.com/photo-1543339308-43e59d6b73a6?auto=format&fit=crop&q=80&w=600",
+    },
+    {
+      id: 5,
+      name: "Zucchini Noodles",
+      description: "Fresh zoodles with basil pesto.",
+      image:
+        "https://images.unsplash.com/photo-1547592166-23ac45744acd?auto=format&fit=crop&q=80&w=600",
+    },
   ];
 
   const signature: Dish[] = [
-    { id: 6, name: "Pan-Seared Salmon", description: "Atlantic salmon with asparagus.", image: "https://images.unsplash.com/photo-1467003909585-2f8a72700288?auto=format&fit=crop&q=80&w=600" },
-    { id: 7, name: "Beef Short Rib", description: "Slow-cooked beef with creamy polenta.", image: "https://images.unsplash.com/photo-1544025162-d76694265947?auto=format&fit=crop&q=80&w=600" },
-    { id: 8, name: "Chicken Saltimbocca", description: "Prosciutto-wrapped chicken.", image: "https://images.unsplash.com/photo-1604908176997-125f25cc6f3d?auto=format&fit=crop&q=80&w=600" },
-    { id: 9, name: "Truffle Pasta", description: "Handmade fettuccine with truffle.", image: "https://images.unsplash.com/photo-1473093226795-af9932fe5856?auto=format&fit=crop&q=80&w=600" },
-    { id: 10, name: "Grilled Lamb", description: "Herb-crusted lamb with root vegetables.", image: "https://images.unsplash.com/photo-1559339352-11d035aa65de?auto=format&fit=crop&q=80&w=600" },
+    {
+      id: 6,
+      name: "Pan-Seared Salmon",
+      description: "Atlantic salmon with asparagus.",
+      image:
+        "https://images.unsplash.com/photo-1467003909585-2f8a72700288?auto=format&fit=crop&q=80&w=600",
+    },
+    {
+      id: 7,
+      name: "Beef Short Rib",
+      description: "Slow-cooked beef with creamy polenta.",
+      image:
+        "https://images.unsplash.com/photo-1544025162-d76694265947?auto=format&fit=crop&q=80&w=600",
+    },
+    {
+      id: 8,
+      name: "Chicken Saltimbocca",
+      description: "Prosciutto-wrapped chicken.",
+      image:
+        "https://images.unsplash.com/photo-1604908176997-125f25cc6f3d?auto=format&fit=crop&q=80&w=600",
+    },
+    {
+      id: 9,
+      name: "Truffle Pasta",
+      description: "Handmade fettuccine with truffle.",
+      image:
+        "https://images.unsplash.com/photo-1473093226795-af9932fe5856?auto=format&fit=crop&q=80&w=600",
+    },
+    {
+      id: 10,
+      name: "Grilled Lamb",
+      description: "Herb-crusted lamb with root vegetables.",
+      image:
+        "https://images.unsplash.com/photo-1559339352-11d035aa65de?auto=format&fit=crop&q=80&w=600",
+    },
   ];
 
   return (
@@ -331,23 +540,39 @@ const MenuSection = () => {
       <div className="max-w-7xl mx-auto px-6 md:px-12">
         <div className="flex flex-col md:flex-row md:items-end justify-between mb-24 gap-12">
           <div className="max-w-xl">
-            <span className="text-[10px] uppercase tracking-[0.5em] font-black text-slate-400 mb-6 block">// Seasonal Selection</span>
-            <h2 className="text-6xl md:text-8xl font-serif text-slate-900 leading-none">The <br />Menu.</h2>
+            <span className="text-[10px] uppercase tracking-[0.5em] font-black text-slate-400 mb-6 block">
+              // Seasonal Selection
+            </span>
+            <h2 className="text-6xl md:text-8xl font-serif text-slate-900 leading-none">
+              The <br />
+              Menu.
+            </h2>
           </div>
           <p className="text-slate-900 font-black uppercase text-[10px] tracking-[0.3em] max-w-xs leading-relaxed border-2 border-slate-900 p-6">
-            Our menus evolve with the seasons, ensuring the freshest ingredients reach your desk.
+            Our menus evolve with the seasons, ensuring the freshest ingredients
+            reach your desk.
           </p>
         </div>
 
         <div className="space-y-40">
           <div>
             <div className="flex items-center gap-10 mb-16">
-              <h3 className="text-4xl font-serif text-slate-900">Plant Based</h3>
+              <h3 className="text-4xl font-serif text-slate-900">
+                Plant Based
+              </h3>
               <div className="h-1 flex-grow bg-slate-900" />
-              <span className="text-xs font-mono font-black text-slate-900">FROM $14.99</span>
+              <span className="text-xs font-mono font-black text-slate-900">
+                FROM $14.99
+              </span>
             </div>
             <div className="grid sm:grid-cols-2 lg:grid-cols-5 gap-8">
-              {plantBased.map(dish => <DishCard key={dish.id} dish={dish} onClick={() => setSelectedDish(dish)} />)}
+              {plantBased.map((dish) => (
+                <DishCard
+                  key={dish.id}
+                  dish={dish}
+                  onClick={() => setSelectedDish(dish)}
+                />
+              ))}
             </div>
           </div>
 
@@ -355,10 +580,18 @@ const MenuSection = () => {
             <div className="flex items-center gap-10 mb-16">
               <h3 className="text-4xl font-serif text-slate-900">Signature</h3>
               <div className="h-1 flex-grow bg-slate-900" />
-              <span className="text-xs font-mono font-black text-slate-900">FROM $16.99</span>
+              <span className="text-xs font-mono font-black text-slate-900">
+                FROM $16.99
+              </span>
             </div>
             <div className="grid sm:grid-cols-2 lg:grid-cols-5 gap-8">
-              {signature.map(dish => <DishCard key={dish.id} dish={dish} onClick={() => setSelectedDish(dish)} />)}
+              {signature.map((dish) => (
+                <DishCard
+                  key={dish.id}
+                  dish={dish}
+                  onClick={() => setSelectedDish(dish)}
+                />
+              ))}
             </div>
           </div>
         </div>
@@ -366,7 +599,10 @@ const MenuSection = () => {
 
       <AnimatePresence>
         {selectedDish && (
-          <DishModal dish={selectedDish} onClose={() => setSelectedDish(null)} />
+          <DishModal
+            dish={selectedDish}
+            onClose={() => setSelectedDish(null)}
+          />
         )}
       </AnimatePresence>
     </section>
@@ -375,56 +611,104 @@ const MenuSection = () => {
 
 const Pricing = () => {
   return (
-    <section id="pricing" className="py-32 bg-white border-b-2 border-slate-900">
+    <section
+      id="pricing"
+      className="py-32 bg-white border-b-2 border-slate-900"
+    >
       <div className="max-w-7xl mx-auto px-6 md:px-12">
         <div className="text-center mb-32">
-          <h2 className="text-6xl md:text-8xl font-serif text-slate-900 mb-10 leading-none">The <br />Investment.</h2>
-          <p className="text-[10px] uppercase tracking-[0.5em] font-black text-slate-400">Transparent pricing for high-performance teams.</p>
+          <h2 className="text-6xl md:text-8xl font-serif text-slate-900 mb-10 leading-none">
+            The <br />
+            Investment.
+          </h2>
+          <p className="text-[10px] uppercase tracking-[0.5em] font-black text-slate-400">
+            Transparent pricing for high-performance teams.
+          </p>
         </div>
 
         <div className="grid lg:grid-cols-2 gap-0 border-2 border-slate-900">
           <div className="p-16 border-b-2 lg:border-b-0 lg:border-r-2 border-slate-900 hover:bg-slate-50 transition-all">
             <div className="flex justify-between items-start mb-16">
               <div>
-                <h3 className="text-4xl font-serif text-slate-900 mb-4">Plant Based</h3>
-                <p className="text-[10px] text-slate-400 uppercase tracking-widest font-black">The Conscious Choice</p>
+                <h3 className="text-4xl font-serif text-slate-900 mb-4">
+                  Plant Based
+                </h3>
+                <p className="text-[10px] text-slate-400 uppercase tracking-widest font-black">
+                  The Conscious Choice
+                </p>
               </div>
               <div className="text-right">
-                <span className="text-5xl font-serif text-slate-900">$14.99</span>
-                <p className="text-[10px] text-slate-400 uppercase font-black tracking-widest">Per Meal</p>
+                <span className="text-5xl font-serif text-slate-900">
+                  $14.99
+                </span>
+                <p className="text-[10px] text-slate-400 uppercase font-black tracking-widest">
+                  Per Meal
+                </p>
               </div>
             </div>
             <ul className="space-y-8 mb-16">
-              {['100% Vegan options', 'Gluten-free available', 'Eco-friendly packaging', 'Weekly menu rotation', 'Dedicated account manager'].map((item, i) => (
-                <li key={i} className="flex items-center gap-6 text-xs font-bold uppercase tracking-widest text-slate-600">
+              {[
+                "100% Vegan options",
+                "Gluten-free available",
+                "Eco-friendly packaging",
+                "Weekly menu rotation",
+                "Dedicated account manager",
+              ].map((item, i) => (
+                <li
+                  key={i}
+                  className="flex items-center gap-6 text-xs font-bold uppercase tracking-widest text-slate-600"
+                >
                   <div className="w-2 h-2 bg-slate-900" />
                   {item}
                 </li>
               ))}
             </ul>
-            <a href="#subscribe" className="btn-edgy w-full text-center block text-sm py-5">Select Plan</a>
+            <a
+              href="#subscribe"
+              className="btn-edgy w-full text-center block text-sm py-5"
+            >
+              Select Plan
+            </a>
           </div>
 
           <div className="p-16 bg-slate-900 text-white hover:bg-black transition-all">
             <div className="flex justify-between items-start mb-16">
               <div>
                 <h3 className="text-4xl font-serif mb-4">Signature</h3>
-                <p className="text-[10px] text-slate-500 uppercase tracking-widest font-black">The Executive Choice</p>
+                <p className="text-[10px] text-slate-500 uppercase tracking-widest font-black">
+                  The Executive Choice
+                </p>
               </div>
               <div className="text-right">
                 <span className="text-5xl font-serif">$16.99</span>
-                <p className="text-[10px] text-slate-500 uppercase font-black tracking-widest">Per Meal</p>
+                <p className="text-[10px] text-slate-500 uppercase font-black tracking-widest">
+                  Per Meal
+                </p>
               </div>
             </div>
             <ul className="space-y-8 mb-16">
-              {['Premium proteins', 'Chef-special recipes', 'Priority delivery window', 'Customization options', 'Everything in Plant Based'].map((item, i) => (
-                <li key={i} className="flex items-center gap-6 text-xs font-bold uppercase tracking-widest text-slate-400">
+              {[
+                "Premium proteins",
+                "Chef-special recipes",
+                "Priority delivery window",
+                "Customization options",
+                "Everything in Plant Based",
+              ].map((item, i) => (
+                <li
+                  key={i}
+                  className="flex items-center gap-6 text-xs font-bold uppercase tracking-widest text-slate-400"
+                >
                   <div className="w-2 h-2 bg-white" />
                   {item}
                 </li>
               ))}
             </ul>
-            <a href="#subscribe" className="px-8 py-5 font-black uppercase tracking-[0.3em] transition-all duration-300 bg-white text-slate-900 hover:bg-slate-200 w-full text-center block text-sm border-2 border-white">Select Plan</a>
+            <a
+              href="#subscribe"
+              className="px-8 py-5 font-black uppercase tracking-[0.3em] transition-all duration-300 bg-white text-slate-900 hover:bg-slate-200 w-full text-center block text-sm border-2 border-white"
+            >
+              Select Plan
+            </a>
           </div>
         </div>
       </div>
@@ -434,24 +718,24 @@ const Pricing = () => {
 
 const SubscriptionForm = () => {
   const [formData, setFormData] = useState({
-    officeName: '',
-    contactName: '',
-    email: '',
-    phone: '',
-    employees: '',
-    plan: 'signature',
-    message: ''
+    officeName: "",
+    contactName: "",
+    email: "",
+    phone: "",
+    employees: "",
+    plan: "signature",
+    message: "",
   });
-  const [error, setError] = useState('');
+  const [error, setError] = useState("");
   const [submitted, setSubmitted] = useState(false);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (parseInt(formData.employees) < 10) {
-      setError('Minimum 10 employees required.');
+      setError("Minimum 10 employees required.");
       return;
     }
-    setError('');
+    setError("");
     setSubmitted(true);
   };
 
@@ -459,14 +743,22 @@ const SubscriptionForm = () => {
     return (
       <section id="subscribe" className="py-32 bg-white">
         <div className="max-w-3xl mx-auto px-6 text-center">
-          <motion.div 
+          <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             className="card-edgy p-20"
           >
-            <h2 className="text-5xl font-serif text-slate-900 mb-10">Inquiry Received.</h2>
-            <p className="text-slate-500 font-bold uppercase tracking-widest text-xs mb-12 leading-loose">Our concierge will contact you within 24 hours to discuss your office's specific requirements.</p>
-            <button onClick={() => setSubmitted(false)} className="text-[10px] uppercase tracking-[0.5em] font-black text-slate-900 border-b-4 border-slate-900 pb-2">
+            <h2 className="text-5xl font-serif text-slate-900 mb-10">
+              Inquiry Received.
+            </h2>
+            <p className="text-slate-500 font-bold uppercase tracking-widest text-xs mb-12 leading-loose">
+              Our concierge will contact you within 24 hours to discuss your
+              office's specific requirements.
+            </p>
+            <button
+              onClick={() => setSubmitted(false)}
+              className="text-[10px] uppercase tracking-[0.5em] font-black text-slate-900 border-b-4 border-slate-900 pb-2"
+            >
               Back to form
             </button>
           </motion.div>
@@ -476,93 +768,145 @@ const SubscriptionForm = () => {
   }
 
   return (
-    <section id="subscribe" className="py-32 bg-white border-b-2 border-slate-900">
+    <section
+      id="subscribe"
+      className="py-32 bg-white border-b-2 border-slate-900"
+    >
       <div className="max-w-7xl mx-auto px-6 md:px-12">
         <div className="grid lg:grid-cols-12 gap-20">
           <div className="lg:col-span-5">
-            <span className="text-[10px] uppercase tracking-[0.5em] font-black text-slate-400 mb-10 block">// Join the Circle</span>
-            <h2 className="text-6xl md:text-8xl font-serif text-slate-900 mb-12 leading-none">Request <br />Access.</h2>
+            <span className="text-[10px] uppercase tracking-[0.5em] font-black text-slate-400 mb-10 block">
+              // Join the Circle
+            </span>
+            <h2 className="text-6xl md:text-8xl font-serif text-slate-900 mb-12 leading-none">
+              Request <br />
+              Access.
+            </h2>
             <p className="text-slate-600 font-medium leading-relaxed mb-16 border-l-4 border-slate-900 pl-8">
-              We are currently accepting a limited number of new office subscriptions to maintain our standard of service.
+              We are currently accepting a limited number of new office
+              subscriptions to maintain our standard of service.
             </p>
             <div className="space-y-16">
               <div className="flex gap-10">
-                <div className="text-slate-900 font-mono text-4xl font-black">01</div>
+                <div className="text-slate-900 font-mono text-4xl font-black">
+                  01
+                </div>
                 <div>
-                  <h4 className="font-black tracking-widest uppercase text-xs text-slate-900 mb-4">Concierge Setup</h4>
-                  <p className="text-sm text-slate-500 font-medium">Personalized onboarding for your entire team.</p>
+                  <h4 className="font-black tracking-widest uppercase text-xs text-slate-900 mb-4">
+                    Concierge Setup
+                  </h4>
+                  <p className="text-sm text-slate-500 font-medium">
+                    Personalized onboarding for your entire team.
+                  </p>
                 </div>
               </div>
               <div className="flex gap-10">
-                <div className="text-slate-900 font-mono text-4xl font-black">02</div>
+                <div className="text-slate-900 font-mono text-4xl font-black">
+                  02
+                </div>
                 <div>
-                  <h4 className="font-black tracking-widest uppercase text-xs text-slate-900 mb-4">Flexible Scaling</h4>
-                  <p className="text-sm text-slate-500 font-medium">Adjust your volume as your team grows.</p>
+                  <h4 className="font-black tracking-widest uppercase text-xs text-slate-900 mb-4">
+                    Flexible Scaling
+                  </h4>
+                  <p className="text-sm text-slate-500 font-medium">
+                    Adjust your volume as your team grows.
+                  </p>
                 </div>
               </div>
             </div>
           </div>
 
           <div className="lg:col-span-7 card-edgy">
-            <form onSubmit={handleSubmit} className="grid md:grid-cols-2 gap-12">
+            <form
+              onSubmit={handleSubmit}
+              className="grid md:grid-cols-2 gap-12"
+            >
               <div className="space-y-4">
-                <label className="text-[10px] uppercase tracking-[0.3em] font-black text-slate-400">Office Name</label>
-                <input 
+                <label className="text-[10px] uppercase tracking-[0.3em] font-black text-slate-400">
+                  Office Name
+                </label>
+                <input
                   required
-                  type="text" 
+                  type="text"
                   className="w-full bg-transparent border-b-2 border-slate-200 py-4 focus:border-slate-900 outline-none transition-colors font-bold text-slate-900"
                   value={formData.officeName}
-                  onChange={e => setFormData({...formData, officeName: e.target.value})}
+                  onChange={(e) =>
+                    setFormData({ ...formData, officeName: e.target.value })
+                  }
                 />
               </div>
               <div className="space-y-4">
-                <label className="text-[10px] uppercase tracking-[0.3em] font-black text-slate-400">Contact Name</label>
-                <input 
+                <label className="text-[10px] uppercase tracking-[0.3em] font-black text-slate-400">
+                  Contact Name
+                </label>
+                <input
                   required
-                  type="text" 
+                  type="text"
                   className="w-full bg-transparent border-b-2 border-slate-200 py-4 focus:border-slate-900 outline-none transition-colors font-bold text-slate-900"
                   value={formData.contactName}
-                  onChange={e => setFormData({...formData, contactName: e.target.value})}
+                  onChange={(e) =>
+                    setFormData({ ...formData, contactName: e.target.value })
+                  }
                 />
               </div>
               <div className="space-y-4">
-                <label className="text-[10px] uppercase tracking-[0.3em] font-black text-slate-400">Work Email</label>
-                <input 
+                <label className="text-[10px] uppercase tracking-[0.3em] font-black text-slate-400">
+                  Work Email
+                </label>
+                <input
                   required
-                  type="email" 
+                  type="email"
                   className="w-full bg-transparent border-b-2 border-slate-200 py-4 focus:border-slate-900 outline-none transition-colors font-bold text-slate-900"
                   value={formData.email}
-                  onChange={e => setFormData({...formData, email: e.target.value})}
+                  onChange={(e) =>
+                    setFormData({ ...formData, email: e.target.value })
+                  }
                 />
               </div>
               <div className="space-y-4">
-                <label className="text-[10px] uppercase tracking-[0.3em] font-black text-slate-400">Phone</label>
-                <input 
+                <label className="text-[10px] uppercase tracking-[0.3em] font-black text-slate-400">
+                  Phone
+                </label>
+                <input
                   required
-                  type="tel" 
+                  type="tel"
                   className="w-full bg-transparent border-b-2 border-slate-200 py-4 focus:border-slate-900 outline-none transition-colors font-bold text-slate-900"
                   value={formData.phone}
-                  onChange={e => setFormData({...formData, phone: e.target.value})}
+                  onChange={(e) =>
+                    setFormData({ ...formData, phone: e.target.value })
+                  }
                 />
               </div>
               <div className="space-y-4">
-                <label className="text-[10px] uppercase tracking-[0.3em] font-black text-slate-400">Team Size</label>
-                <input 
+                <label className="text-[10px] uppercase tracking-[0.3em] font-black text-slate-400">
+                  Team Size
+                </label>
+                <input
                   required
-                  type="number" 
-                  className={`w-full bg-transparent border-b-2 ${error ? 'border-red-500' : 'border-slate-200'} py-4 focus:border-slate-900 outline-none transition-colors font-bold text-slate-900`}
+                  type="number"
+                  className={`w-full bg-transparent border-b-2 ${error ? "border-red-500" : "border-slate-200"} py-4 focus:border-slate-900 outline-none transition-colors font-bold text-slate-900`}
                   value={formData.employees}
-                  onChange={e => setFormData({...formData, employees: e.target.value})}
+                  onChange={(e) =>
+                    setFormData({ ...formData, employees: e.target.value })
+                  }
                 />
-                {error && <p className="text-[10px] text-red-500 font-black mt-2">{error}</p>}
+                {error && (
+                  <p className="text-[10px] text-red-500 font-black mt-2">
+                    {error}
+                  </p>
+                )}
               </div>
               <div className="space-y-4">
-                <label className="text-[10px] uppercase tracking-[0.3em] font-black text-slate-400">Preferred Plan</label>
+                <label className="text-[10px] uppercase tracking-[0.3em] font-black text-slate-400">
+                  Preferred Plan
+                </label>
                 <div className="relative group">
-                  <select 
+                  <select
                     className="w-full bg-transparent border-b-2 border-slate-200 py-4 focus:border-slate-900 outline-none transition-colors font-bold text-slate-900 appearance-none cursor-pointer pr-10"
                     value={formData.plan}
-                    onChange={e => setFormData({...formData, plan: e.target.value})}
+                    onChange={(e) =>
+                      setFormData({ ...formData, plan: e.target.value })
+                    }
                   >
                     <option value="signature">Signature Plan</option>
                     <option value="plant-based">Plant Based Plan</option>
@@ -574,16 +918,22 @@ const SubscriptionForm = () => {
                 </div>
               </div>
               <div className="md:col-span-2 space-y-4">
-                <label className="text-[10px] uppercase tracking-[0.3em] font-black text-slate-400">Message</label>
-                <textarea 
+                <label className="text-[10px] uppercase tracking-[0.3em] font-black text-slate-400">
+                  Message
+                </label>
+                <textarea
                   rows={2}
                   className="w-full bg-transparent border-b-2 border-slate-200 py-4 focus:border-slate-900 outline-none transition-colors font-bold text-slate-900"
                   value={formData.message}
-                  onChange={e => setFormData({...formData, message: e.target.value})}
+                  onChange={(e) =>
+                    setFormData({ ...formData, message: e.target.value })
+                  }
                 ></textarea>
               </div>
               <div className="md:col-span-2 pt-10">
-                <button type="submit" className="btn-edgy w-full text-sm">Submit Inquiry</button>
+                <button type="submit" className="btn-edgy w-full text-sm">
+                  Submit Inquiry
+                </button>
               </div>
             </form>
           </div>
@@ -595,10 +945,22 @@ const SubscriptionForm = () => {
 
 const FAQ = () => {
   const faqs = [
-    { q: "What is the minimum order size?", a: "We specialize in office subscriptions for teams of 10 or more." },
-    { q: "Can we change our plan weekly?", a: "Yes, adjustments can be made up to 48 hours before delivery." },
-    { q: "How do you handle food allergies?", a: "All meals are meticulously labeled with full ingredient lists." },
-    { q: "Is the packaging sustainable?", a: "We use 100% compostable materials for all our deliveries." }
+    {
+      q: "What is the minimum order size?",
+      a: "We specialize in office subscriptions for teams of 10 or more.",
+    },
+    {
+      q: "Can we change our plan weekly?",
+      a: "Yes, adjustments can be made up to 48 hours before delivery.",
+    },
+    {
+      q: "How do you handle food allergies?",
+      a: "All meals are meticulously labeled with full ingredient lists.",
+    },
+    {
+      q: "Is the packaging sustainable?",
+      a: "We use 100% compostable materials for all our deliveries.",
+    },
   ];
 
   const [openIdx, setOpenIdx] = useState<number | null>(0);
@@ -606,22 +968,33 @@ const FAQ = () => {
   return (
     <section id="faq" className="py-32 bg-white">
       <div className="max-w-3xl mx-auto px-6 md:px-12">
-        <h2 className="text-6xl font-serif text-slate-900 mb-20 text-center leading-none">Common <br />Questions.</h2>
+        <h2 className="text-6xl font-serif text-slate-900 mb-20 text-center leading-none">
+          Common <br />
+          Questions.
+        </h2>
         <div className="space-y-0 border-2 border-slate-900">
           {faqs.map((faq, idx) => (
-            <div key={idx} className={`${idx !== faqs.length - 1 ? 'border-b-2 border-slate-900' : ''}`}>
-              <button 
+            <div
+              key={idx}
+              className={`${idx !== faqs.length - 1 ? "border-b-2 border-slate-900" : ""}`}
+            >
+              <button
                 onClick={() => setOpenIdx(openIdx === idx ? null : idx)}
                 className="w-full p-8 text-left flex items-center justify-between group hover:bg-slate-50 transition-colors"
               >
-                <span className="text-xl font-serif text-slate-900">{faq.q}</span>
-                <ChevronDown size={24} className={`text-slate-900 transition-transform duration-500 ${openIdx === idx ? 'rotate-180' : ''}`} />
+                <span className="text-xl font-serif text-slate-900">
+                  {faq.q}
+                </span>
+                <ChevronDown
+                  size={24}
+                  className={`text-slate-900 transition-transform duration-500 ${openIdx === idx ? "rotate-180" : ""}`}
+                />
               </button>
               <AnimatePresence>
                 {openIdx === idx && (
-                  <motion.div 
+                  <motion.div
                     initial={{ height: 0, opacity: 0 }}
-                    animate={{ height: 'auto', opacity: 1 }}
+                    animate={{ height: "auto", opacity: 1 }}
                     exit={{ height: 0, opacity: 0 }}
                     className="overflow-hidden"
                   >
@@ -646,28 +1019,47 @@ const Footer = () => {
         <div className="flex flex-col md:flex-row items-center justify-between gap-16">
           <div className="text-center md:text-left">
             <Logo className="!text-white" />
-            <p className="text-[10px] uppercase tracking-[0.6em] text-slate-500 mt-6 font-black">Refined Office Culture</p>
+            <p className="text-[10px] uppercase tracking-[0.6em] text-slate-500 mt-6 font-black">
+              Refined Office Culture
+            </p>
           </div>
-          
+
           <div className="flex flex-col items-center md:items-end gap-10">
             <div className="flex gap-12">
-              <a href="#" className="text-slate-500 hover:text-white transition-all transform hover:scale-125">
+              <a
+                href="#"
+                className="text-slate-500 hover:text-white transition-all transform hover:scale-125"
+              >
                 <Instagram size={24} />
               </a>
-              <a href="#" className="text-slate-500 hover:text-white transition-all transform hover:scale-125">
+              <a
+                href="#"
+                className="text-slate-500 hover:text-white transition-all transform hover:scale-125"
+              >
                 <Twitter size={24} />
               </a>
-              <a href="#" className="text-slate-500 hover:text-white transition-all transform hover:scale-125">
+              <a
+                href="#"
+                className="text-slate-500 hover:text-white transition-all transform hover:scale-125"
+              >
                 <Facebook size={24} />
               </a>
-              <a href="#" className="text-slate-500 hover:text-white transition-all transform hover:scale-125">
+              <a
+                href="#"
+                className="text-slate-500 hover:text-white transition-all transform hover:scale-125"
+              >
                 <Linkedin size={24} />
               </a>
-              <a href="mailto:hello@eateasy.com" className="text-slate-500 hover:text-white transition-all transform hover:scale-125">
+              <a
+                href="mailto:hello@eateasy.com"
+                className="text-slate-500 hover:text-white transition-all transform hover:scale-125"
+              >
                 <Mail size={24} />
               </a>
             </div>
-            <p className="text-[10px] text-slate-600 font-black tracking-widest uppercase">© 2024 EAT EASY. ALL RIGHTS RESERVED.</p>
+            <p className="text-[10px] text-slate-600 font-black tracking-widest uppercase">
+              © 2024 EAT EASY. ALL RIGHTS RESERVED.
+            </p>
           </div>
         </div>
       </div>

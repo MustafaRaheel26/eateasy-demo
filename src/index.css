@@ -1,23 +1,41 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Playfair+Display:ital,wght@0,400;0,700;1,400&family=JetBrains+Mono:wght@400;500&display=swap');
+@import url("https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Playfair+Display:ital,wght@0,400;0,700;1,400&family=JetBrains+Mono:wght@400;500&display=swap");
 @import "tailwindcss";
 
 @theme {
   --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
   --font-serif: "Playfair Display", serif;
   --font-mono: "JetBrains Mono", monospace;
-  
-  --color-brand-blue: #0A0A0A; /* Pure black for edgy feel */
-  --color-brand-accent: #f27d26; 
-  --color-brand-green: #1a1a1a; 
+
+  --color-brand-blue: #0a0a0a; /* Pure black for edgy feel */
+  --color-brand-accent: #f27d26;
+  --color-brand-green: #1a1a1a;
 }
 
 @layer base {
-  body {
-    @apply font-sans text-slate-900 bg-[#FFFFFF]; 
+  /* Optimize for mobile rendering */
+  * {
     -webkit-font-smoothing: antialiased;
+    -webkit-backface-visibility: hidden;
+    backface-visibility: hidden;
   }
-  
-  h1, h2, h3 {
+
+  html {
+    /* Remove smooth scroll on mobile - causes jank */
+    @media (min-width: 1024px) {
+      scroll-behavior: smooth;
+    }
+  }
+
+  body {
+    @apply font-sans text-slate-900 bg-[#FFFFFF];
+    -webkit-font-smoothing: antialiased;
+    /* Prevent layout shift on mobile */
+    overflow-x: hidden;
+  }
+
+  h1,
+  h2,
+  h3 {
     @apply font-serif;
   }
 }
@@ -38,14 +56,53 @@
 }
 
 .btn-edgy {
-  @apply relative overflow-hidden px-8 py-4 font-bold transition-all duration-300 border-2 border-slate-900 hover:bg-slate-900 hover:text-white uppercase tracking-widest text-[10px];
+  @apply relative overflow-hidden px-8 py-4 font-bold border-2 border-slate-900 hover:bg-slate-900 hover:text-white uppercase tracking-widest text-[10px];
+  transform: translateZ(0);
+  will-change: transform;
+  backface-visibility: hidden;
+}
+
+@media (max-width: 1023px) {
+  .btn-edgy {
+    @apply transition-none;
+    background-color: transparent;
+    color: inherit;
+  }
+
+  .btn-edgy:active {
+    transform: scale(0.95) translateZ(0);
+  }
+}
+
+@media (min-width: 1024px) {
+  .btn-edgy {
+    @apply transition-all duration-300;
+  }
+
+  .btn-edgy:active {
+    transform: scale(0.98);
+  }
 }
 
 .card-edgy {
-  @apply bg-white border-2 border-slate-900 p-8 transition-all duration-300 hover:shadow-[8px_8px_0px_0px_rgba(0,0,0,1)];
+  @apply bg-white border-2 border-slate-900 p-8;
+  transform: translateZ(0);
 }
 
-/* Custom Scrollbar */
+@media (max-width: 1023px) {
+  .card-edgy {
+    @apply hover:shadow-none;
+    box-shadow: none !important;
+  }
+}
+
+@media (min-width: 1024px) {
+  .card-edgy {
+    @apply transition-all duration-300 hover:shadow-[8px_8px_0px_0px_rgba(0,0,0,1)];
+  }
+}
+
+/* Optimize scrollbar for better feel */
 ::-webkit-scrollbar {
   width: 6px;
 }
@@ -54,5 +111,109 @@
 }
 ::-webkit-scrollbar-thumb {
   background: #000;
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #333;
 }
 
+/* Reduce motion for accessibility */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* Mobile optimization */
+@media (max-width: 1023px) {
+  body {
+    font-size: 16px; /* Prevent zoom on input focus */
+  }
+
+  /* Reduce animation complexity on mobile */
+  button,
+  a {
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  img {
+    display: block;
+  }
+
+  /* Disable all transitions on mobile by default */
+  * {
+    transition: none !important;
+    animation-duration: 0.1s !important;
+  }
+
+  /* Allow only essential animations */
+  [class*="motion"] {
+    animation-duration: 0.15s !important;
+  }
+
+  /* Remove expensive shadows */
+  *[class*="shadow"] {
+    box-shadow: none !important;
+  }
+
+  /* Optimize blur effects */
+  .backdrop-blur-sm {
+    backdrop-filter: none !important;
+  }
+
+  /* Disable hover state transitions */
+  button:hover,
+  a:hover {
+    background-color: initial !important;
+    color: initial !important;
+  }
+
+  /* Optimize form elements */
+  input,
+  textarea,
+  select {
+    font-size: 16px;
+    border-radius: 4px;
+  }
+
+  /* Reduce paint areas */
+  [class*="border"] {
+    will-change: auto;
+  }
+
+  /* GPU acceleration for critical elements */
+  .will-change-transform,
+  .will-change-auto {
+    transform: translateZ(0);
+    -webkit-transform: translateZ(0);
+  }
+}
+
+@media (max-width: 768px) {
+  /* Further optimizations for small phones */
+  body {
+    overflow-x: hidden;
+  }
+
+  h1,
+  h2,
+  h3 {
+    word-break: break-word;
+  }
+
+  /* Reduce padding on very small screens */
+  [class*="px-12"] {
+    padding-left: 24px;
+    padding-right: 24px;
+  }
+
+  [class*="py-32"] {
+    padding-top: 32px;
+    padding-bottom: 32px;
+  }
+}
